@@ -2,7 +2,7 @@ const hre = require("hardhat");
 
 async function main() {
   const Teacher = await hre.ethers.getContractFactory("Teacher");
-  const teacher = await Teacher.deploy(score.address);
+  const teacher = await Teacher.deploy();
   await teacher.deployed();
   console.log("Teacher deployed to: %s[%s]", hre.network.name, teacher.address);
   
