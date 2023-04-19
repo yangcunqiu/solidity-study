@@ -2,6 +2,7 @@
 pragma solidity ^0.8.17;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "hardhat/console.sol";
 
 // 实现存取erc20
 /// @title erc20 ZML token
