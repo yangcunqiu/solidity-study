@@ -1,0 +1,16 @@
+{
+    "title": "XHL",
+    "description": "testerc721",
+    "image": "ipfs://QmR6aPMEAozmnjnggZd9geqr6PYeuz6QAAYDmyaVerJ1by",
+    "attributes": [
+        {
+            "trait_type": "number",
+            "value": "001"
+        },
+        {
+            "trait_type": "color",
+            "value": "yellow"
+        }
+    ],
+    "version": "1"
+}
