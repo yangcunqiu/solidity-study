@@ -56,7 +56,7 @@ contract MyDex {
         }
     }
 
-    // 添加流动性
+    /// @notice 添加流动性
     /// @param _tokenA tokenA地址
     /// @param _tokenB _tokenB地址
     /// @param _amountADesired tokenA期望能够添加的数量
@@ -88,5 +88,36 @@ contract MyDex {
         emit AddLiquidity(msg.sender, _tokenA, _tokenB, amountA, amountB);
     }
 
-    
+    // swap
+    function _swap(uint[] memory _amounts, address[] memory _path, address _to) private {
+        // TODO
+    }
+
+    /// @notice 给定一个token的输入, 兑换出另一个token
+    /// @param _amountIn 支付的token数量
+    /// @param _amountOutMin 能接受的最小的兑换出的token数量 (这里其实就是设置的滑点)
+    /// @param _path 兑换路径 假如没有A和C的pair, 可以使用[A,B,C]通过B-token中转用A兑换出C
+    /// @return amounts 返回兑换路径中所有token的兑换数量
+    function swapEactTokenForTokens(
+        uint _amountIn,
+        uint _amountOutMin,
+        address[] memory _path,
+        address _to
+    ) external returns(uint[] memory amounts) {
+        console.log("swapEactTokenForTokens, amountIn", _amountIn);
+        for (uint i; i < _path.length - 1; i++) {
+            console.log("swapEactTokenForTokens, path: %s ", _path[i]);
+        }
+        
+        // 计算出所有路径的可兑换数量
+        amounts = PairLibrary.getAmountsOut(address(factory), _amountIn, _path);
+        // 校验必须达到amountOutMin数量, amounts的最后一个就是要最终兑换出的token
+        require(amounts[amounts.length - 1] >= _amountOutMin, "INSUFFICIENT_OUTPUT_AMOUNT");
+        // 将path[0]的token从调用者转到pair合约, 转amounts[0]的数量, path[0]和amounts[0]就是调用者想用来兑换的token和数量
+        TransferHelper.safeTransferFrom(_path[0], msg.sender, PairLibrary.getPair(address(factory), _path[0], _path[1]), amounts[0]);
+        // 开始swap
+        _swap(amounts, _path, _to);
+    }
+
+
 }

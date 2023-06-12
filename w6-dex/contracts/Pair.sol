@@ -35,7 +35,7 @@ contract Pair is ERC20, ReentrancyGuard {
 
     // 为to地址铸造lpToken
     function mint(address to) external nonReentrant returns(uint liquidity) {
-        // 计算调用者到底给自己转了多少钱
+        // 计算调用者给pair合约转了多少钱
         (uint _reserves0, uint _reserves1) = getReserves();
         uint balance0 = IERC20(token0).balanceOf(address(this));
         uint balance1 = IERC20(token1).balanceOf(address(this));
