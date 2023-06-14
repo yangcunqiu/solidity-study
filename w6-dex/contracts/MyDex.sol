@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
+import "./Pair.sol";
 import "./PairFactory.sol";
 import "./PairLibrary.sol";
 import "hardhat/console.sol";
@@ -90,7 +91,14 @@ contract MyDex {
 
     // swap
     function _swap(uint[] memory _amounts, address[] memory _path, address _to) private {
-        // TODO
+        for (uint i; i < _path.length - 1; i++) {
+            (address input, address output) = (_path[i], _path[i + 1]);
+            (address token0,) = PairLibrary.sortToken(input, output);
+            uint amountOut = _amounts[i + 1];
+            (uint amount0Out, uint amount1Out) = input == token0 ? (uint(0), amountOut) : (amountOut, uint(0));
+            address to = i < _path.length - 2 ? PairLibrary.getPair(address(factory), output, _path[i + 2]) : _to;
+            Pair(PairLibrary.getPair(address(factory), input, output)).swap(amount0Out, amount1Out, to);
+        }
     }
 
     /// @notice 给定一个token的输入, 兑换出另一个token
