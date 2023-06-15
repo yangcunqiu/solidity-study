@@ -176,4 +176,29 @@ contract MyDex {
         require(amountB >= _amountBMin, "INSUFFICIENT_B_AMOUNT");
     }
 
+    // 报价, 给定token数量和两个token储量, 返回等值的另一种token的数量
+    function quote(uint amountA, uint reserveA, uint reserveB) public pure returns(uint amountB) {
+        return PairLibrary.quote(amountA, reserveA, reserveB);
+    }
+
+    // 给定token数量和两个token储量, 返回能兑换出的另一种token的数量
+    function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) public view returns(uint amountOut) {
+        return PairLibrary.getAmountOut(amountIn, reserveIn, reserveOut);
+    }
+
+    // 给定要兑换出的token数量和两个token的储量, 返回所需的另一种token的数量
+    function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut) public view returns(uint amountIn) {
+        return PairLibrary.getAmountIn(amountOut, reserveIn, reserveOut);
+    }
+
+    // 给定一个token的输入, 计算兑换路径内所有token的所需数量
+    function getAmountsOut(uint amountIn, address[] memory path) public view returns(uint[] memory amounts) {
+        return PairLibrary.getAmountsOut(address(factory), amountIn, path);
+    }
+
+    // 给定一个token的输出, 计算兑换路径内所有token的所需数量
+    function getAmountsIn(uint amountOut, address[] memory path) public view returns(uint[] memory amounts) {
+        return PairLibrary.getAmountsIn(address(factory), amountOut, path);
+    }
+
 }
