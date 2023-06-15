@@ -19,6 +19,7 @@ contract Pair is ERC20, ReentrancyGuard {
     event Mint(address, uint);
     // swap的时候触发
     event Swap(address account, uint amount0In, uint amount1In, uint amount0Out, uint amount1Out, address to);
+    event Burn(address account, address to, uint liquidity, uint amount0, uint amount1);
 
     constructor(address _token0, address _token1) ERC20("lpToken", "LP") {
         token0 = _token0;
@@ -36,7 +37,6 @@ contract Pair is ERC20, ReentrancyGuard {
         reserves1 = balance1;
     }
 
-    // 为to地址铸造lpToken
     function mint(address to) external nonReentrant returns(uint liquidity) {
         // 计算调用者给pair合约转了多少钱
         (uint _reserves0, uint _reserves1) = getReserves();
@@ -62,7 +62,6 @@ contract Pair is ERC20, ReentrancyGuard {
         emit Mint(to, liquidity);
     }
 
-    // swap
     function swap(uint amount0Out, uint amount1Out, address to) external nonReentrant {
         require(amount0Out > 0 && amount1Out > 0, "INSUFFICIENT_OUTPUT_AMOUNT");
         (uint _reserve0, uint _reserve1) = getReserves();
@@ -95,5 +94,34 @@ contract Pair is ERC20, ReentrancyGuard {
         // 更新储量
         _update(balance0, balance1);          
         emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
+    }
+
+    function burn(address to) external returns(uint amount0, uint amount1) {
+        // 查看当前pair余额
+        uint balance0 = IERC20(token0).balanceOf(address(this));
+        uint balance1 = IERC20(token1).balanceOf(address(this));
+        // 因为之前已经把调用者的lpToken转移到pair地址了, 所以这里liquidity=调用者发送的lpToken数量
+        uint liquidity = balanceOf(address(this));
+
+        // 计算lpToken能兑换出多少数量的token
+        // 每次swap扣了一部分后再当成输入计算能兑换出多少输出, 但是增加totalSupply的时候没扣, 所以多出来的部分就是手续费, 按比例给每个流动性提供者
+        amount0 = liquidity * balance0 / totalSupply();
+        amount1 = liquidity * balance1 / totalSupply();
+        require(amount0 > 0 && amount1 > 0, "INSUFFICIENT_LIQUIDITY_BURNED");
+
+        // 燃烧lpToken
+        _burn(address(this), liquidity);
+
+        // 给调用者转账
+        TransferHelper.safeTransfer(token0, to, amount0);
+        TransferHelper.safeTransfer(token1, to, amount1);
+
+        // 查看pair最新余额
+        balance0 = IERC20(token0).balanceOf(address(this));
+        balance1 = IERC20(token1).balanceOf(address(this));
+
+        // 更新储量
+        _update(balance0, balance1);
+        emit Burn(msg.sender, to, liquidity, amount0, amount1);
     }
 }

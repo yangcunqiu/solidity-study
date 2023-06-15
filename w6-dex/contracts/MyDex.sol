@@ -105,6 +105,7 @@ contract MyDex {
     /// @param _amountIn 支付的token数量
     /// @param _amountOutMin 能接受的最小的兑换出的token数量 (这里其实就是设置的滑点)
     /// @param _path 兑换路径 假如没有A和C的pair, 可以使用[A,B,C]通过B-token中转用A兑换出C
+    /// @param _to 接收地址
     /// @return amounts 返回兑换路径中所有token的兑换数量
     function swapEactTokenForTokens(
         uint _amountIn,
@@ -127,5 +128,52 @@ contract MyDex {
         _swap(amounts, _path, _to);
     }
 
+    /// @notice 给定一个token的输出, 给出另一个token的输入
+    /// @param _amountOut 要兑换出的token的数量
+    /// @param _amountInMax 接受的最大要支付的token的数量
+    /// @param _path 兑换路径
+    /// @param _to 接收地址
+    /// @return amounts 返回兑换路径中所有token的兑换数量
+    function swapTokensForExactTokens(
+        uint _amountOut,
+        uint _amountInMax,
+        address[] memory _path,
+        address _to
+    ) external returns(uint[] memory amounts) {
+        // 计算出所有路径的可兑换数量
+        amounts = PairLibrary.getAmountsIn(address(factory), _amountOut, _path);
+        require(amounts[0] <= _amountInMax, "EXCESSIVE_INPUT_AMOUNT");
+        // 转_path[0], 从调用者转到_path[0], _path[1]的pair中
+        TransferHelper.safeTransferFrom(_path[0], msg.sender, PairLibrary.getPair(address(factory), _path[0], _path[1]), amounts[0]);
+        _swap(amounts, _path, _to);
+    }
+
+
+    /// @notice 移除流动性
+    /// @param _tokenA tokenA地址
+    /// @param _tokenB tokenB地址
+    /// @param _liquidity lpToken数量
+    /// @param _amountAMin tokenA最少要取出的数量
+    /// @param _amountBMin tokenB最少要取出的数量
+    /// @param _to 接收地址
+    function removeLiquidity(
+        address _tokenA,
+        address _tokenB,
+        uint _liquidity,
+        uint _amountAMin,
+        uint _amountBMin,
+        address _to
+    ) external returns(uint amountA, uint amountB) {
+        address pair = PairLibrary.getPair(address(factory), _tokenA, _tokenB);
+        // 将调用者的lpToken转到pair里面
+        Pair(pair).transferFrom(msg.sender, pair, _liquidity);
+        // 燃烧lpToken, 兑换普通token
+        (uint amount0, uint amount1) = Pair(pair).burn(_to);
+        // 排序, 区分token0和token1
+        (address token0,) = PairLibrary.sortToken(_tokenA, _tokenB);
+        (amountA, amountB) = _tokenA == token0 ? (amount0, amount1) : (amount1, amount0);
+        require(amountA >= _amountAMin, "INSUFFICIENT_A_AMOUNT");
+        require(amountB >= _amountBMin, "INSUFFICIENT_B_AMOUNT");
+    }
 
 }

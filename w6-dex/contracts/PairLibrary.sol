@@ -42,7 +42,7 @@ library PairLibrary {
         return reserves1 / reserves0 * amount0;
     }
 
-    // 给定一个token的输入, 计算兑换路径内所有token可兑换出的数量
+    // 给定一个token的输入, 计算兑换路径内所有token的所需数量
     function getAmountsOut(address factory, uint amountIn, address[] memory path) internal view returns(uint[] memory amounts) {
         require(path.length > 2, "INVALID_PATH");
         amounts = new uint[](path.length);
@@ -57,7 +57,7 @@ library PairLibrary {
 
     }
 
-    // 给定一个token输入和两个token的储量, 计算可兑换出另一个token的数量
+    // 给定一个token输入和两个token的储量, 计算另一个token的输出
     function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) internal view returns(uint amountOut) {
         require(amountIn > 0, "INSUFFICIENT_INPUT_AMOUNT");
         require(reserveIn > 0 && reserveOut > 0, "INSUFFICIENT_LIQUIDITY");
@@ -72,9 +72,38 @@ library PairLibrary {
         console.log("getAmountOut, oneCal: ", amountOut1);
 
         // 使用x*y=k, 不收取手续费算一遍
-        uint xkAmount = (amountIn * reserveOut) / (reserveIn + amountIn);
-        console.log("getAmountOut, nonFee: ", xkAmount);
+        uint kAmountOut = (amountIn * reserveOut) / (reserveIn + amountIn);
+        console.log("getAmountOut, nonFee: ", kAmountOut);
     }
 
+    // 给定一个token的输出, 计算兑换路径内所有token的所需数量
+    function getAmountsIn(address factory, uint amountOut, address[] memory path) internal view returns(uint[] memory amounts) {
+        require(path.length > 2, "INVAILD_PATH");
+        amounts = new uint[](path.length);
+        amounts[amounts.length - 1] = amountOut;
+        // 从后往前遍历
+        for (uint i = path.length - 1; i > 0; i--) {
+            // 获取 path[i-1] 和 path[i]的储量
+            (uint reserveIn, uint reserveOut) = getReserves(factory, path[i - 1], path[i]);
+            amounts[i - 1] = getAmountIn(amounts[i], reserveIn, reserveOut);
+        }
+    }
+
+    // 给定一个token的输出和两个token的储量, 计算另一个token的输入
+    function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut) internal view returns(uint amountIn) {
+        require(amountOut > 0, "INSUFFICIENT_OUTPUT_AMOUNT");
+        require(reserveIn > 0 && reserveOut > 0, "INSUFFICIENT_LIQUIDITY");
+        uint numerator = reserveIn * reserveOut * 1000;
+        uint denominator = (reserveOut - amountOut) * 997; // 扣除手续费
+        amountIn = (numerator / denominator) + 1; // 避免由于整数除法造成的向下取整问题, 确保交易成功
+        console.log("getAmountIn, uniswapV2: ", amountOut);
+
+        // 一步算出结果
+        uint amountIn1 = ((reserveIn * reserveOut * 1000) / ((reserveOut - amountOut) * 997)) + 1;
+        console.log("getAmountIn, oneCal: ", amountIn1);
+
+        uint kAmountIn = (reserveIn * amountOut) / (reserveOut - amountOut);
+        console.log("getAmountIn, nonFee: ", kAmountIn);
+    }
 
 }
