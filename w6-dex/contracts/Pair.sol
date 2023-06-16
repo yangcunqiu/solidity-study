@@ -67,15 +67,17 @@ contract Pair is ERC20, ReentrancyGuard {
         (uint _reserve0, uint _reserve1) = getReserves();
         require(amount0Out < _reserve0 && amount1Out < _reserve1, "INSUFFICIENT_LIQUIDITY");
 
-        address _token0 = token0;
-        address _token1 = token1;
-        require(_token0 != to && _token1 != to, "INVALID_TO");
-        // 乐观转账
-        if (amount0Out > 0) {
-            TransferHelper.safeTransfer(_token0, to, amount0Out);
-        }
-        if (amount1Out > 0) {
-            TransferHelper.safeTransfer(_token1, to, amount1Out);
+        {
+            address _token0 = token0;
+            address _token1 = token1;
+            require(_token0 != to && _token1 != to, "INVALID_TO");
+            // 乐观转账
+            if (amount0Out > 0) {
+                TransferHelper.safeTransfer(_token0, to, amount0Out);
+            }
+            if (amount1Out > 0) {
+                TransferHelper.safeTransfer(_token1, to, amount1Out);
+            }
         }
 
         // 校验转入金额
@@ -92,7 +94,7 @@ contract Pair is ERC20, ReentrancyGuard {
         require(balance0Adjusted * balance1Adjusted >= uint(_reserve0 * _reserve1 * (1000 ** 2)), "K'");
 
         // 更新储量
-        _update(balance0, balance1);          
+        _update(balance0, balance1);
         emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
     }
 

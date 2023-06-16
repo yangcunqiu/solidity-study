@@ -9,13 +9,13 @@ import '@uniswap/lib/contracts/libraries/TransferHelper.sol';
 
 contract MyDex {
 
-    PairFactory public immutable factory;
+    address public immutable factory;
 
     // 添加流动性时触发
     event AddLiquidity(address, address, address, uint, uint);
 
     constructor(address _factory) {
-        factory = PairFactory(_factory);
+        factory = _factory;
     }
 
     // 计算能添加多少流动性
@@ -28,12 +28,12 @@ contract MyDex {
         uint _amountBMin
     ) private returns(uint amountA, uint amountB) {
         // 获取pair地址
-        if (factory.pairMap(_tokenA, _tokenB) == address(0)) {
+        if (PairFactory(factory).pairMap(_tokenA, _tokenB) == address(0)) {
             // 需要创建pair
-            factory.createPair(_tokenA, _tokenB);
+            PairFactory(factory).createPair(_tokenA, _tokenB);
         }
         // 获取token储量
-        (uint reserveA, uint reserveB) = PairLibrary.getReserves(address(factory), _tokenA, _tokenB);
+        (uint reserveA, uint reserveB) = PairLibrary.getReserves(factory, _tokenA, _tokenB);
         if (reserveA == 0 && reserveB == 0) {
             // pair第一次添加流动性
             (amountA, amountB) = (_amountADesired, _amountBDesired);
@@ -75,12 +75,11 @@ contract MyDex {
         uint _amountAMin, 
         uint _amountBMin
     ) public returns(uint amountA, uint amountB, uint liquidity) {
-        console.log("addLiquidity");
         // 计算能添加多少流动性
         (amountA, amountB) = _calLiquidity(_tokenA, _tokenB, _amountADesired, _amountBDesired, _amountAMin, _amountBMin);
 
         // 获取到pair地址
-        address pair = PairLibrary.getPair(address(factory), _tokenA, _tokenB);
+        address pair = PairLibrary.getPair(factory, _tokenA, _tokenB);
         // 转账 将调用者amount数量的token转到pair合约中
         TransferHelper.safeTransferFrom(_tokenA, msg.sender, pair, amountA);
         TransferHelper.safeTransferFrom(_tokenB, msg.sender, pair, amountB);
@@ -96,8 +95,8 @@ contract MyDex {
             (address token0,) = PairLibrary.sortToken(input, output);
             uint amountOut = _amounts[i + 1];
             (uint amount0Out, uint amount1Out) = input == token0 ? (uint(0), amountOut) : (amountOut, uint(0));
-            address to = i < _path.length - 2 ? PairLibrary.getPair(address(factory), output, _path[i + 2]) : _to;
-            Pair(PairLibrary.getPair(address(factory), input, output)).swap(amount0Out, amount1Out, to);
+            address to = i < _path.length - 2 ? PairLibrary.getPair(factory, output, _path[i + 2]) : _to;
+            Pair(PairLibrary.getPair(factory, input, output)).swap(amount0Out, amount1Out, to);
         }
     }
 
@@ -113,17 +112,12 @@ contract MyDex {
         address[] memory _path,
         address _to
     ) external returns(uint[] memory amounts) {
-        console.log("swapEactTokenForTokens, amountIn", _amountIn);
-        for (uint i; i < _path.length - 1; i++) {
-            console.log("swapEactTokenForTokens, path: %s ", _path[i]);
-        }
-        
         // 计算出所有路径的可兑换数量
-        amounts = PairLibrary.getAmountsOut(address(factory), _amountIn, _path);
+        amounts = PairLibrary.getAmountsOut(factory, _amountIn, _path);
         // 校验必须达到amountOutMin数量, amounts的最后一个就是要最终兑换出的token
         require(amounts[amounts.length - 1] >= _amountOutMin, "INSUFFICIENT_OUTPUT_AMOUNT");
         // 将path[0]的token从调用者转到pair合约, 转amounts[0]的数量, path[0]和amounts[0]就是调用者想用来兑换的token和数量
-        TransferHelper.safeTransferFrom(_path[0], msg.sender, PairLibrary.getPair(address(factory), _path[0], _path[1]), amounts[0]);
+        TransferHelper.safeTransferFrom(_path[0], msg.sender, PairLibrary.getPair(factory, _path[0], _path[1]), amounts[0]);
         // 开始swap
         _swap(amounts, _path, _to);
     }
@@ -141,10 +135,10 @@ contract MyDex {
         address _to
     ) external returns(uint[] memory amounts) {
         // 计算出所有路径的可兑换数量
-        amounts = PairLibrary.getAmountsIn(address(factory), _amountOut, _path);
+        amounts = PairLibrary.getAmountsIn(factory, _amountOut, _path);
         require(amounts[0] <= _amountInMax, "EXCESSIVE_INPUT_AMOUNT");
         // 转_path[0], 从调用者转到_path[0], _path[1]的pair中
-        TransferHelper.safeTransferFrom(_path[0], msg.sender, PairLibrary.getPair(address(factory), _path[0], _path[1]), amounts[0]);
+        TransferHelper.safeTransferFrom(_path[0], msg.sender, PairLibrary.getPair(factory, _path[0], _path[1]), amounts[0]);
         _swap(amounts, _path, _to);
     }
 
@@ -164,7 +158,7 @@ contract MyDex {
         uint _amountBMin,
         address _to
     ) external returns(uint amountA, uint amountB) {
-        address pair = PairLibrary.getPair(address(factory), _tokenA, _tokenB);
+        address pair = PairLibrary.getPair(factory, _tokenA, _tokenB);
         // 将调用者的lpToken转到pair里面
         Pair(pair).transferFrom(msg.sender, pair, _liquidity);
         // 燃烧lpToken, 兑换普通token
@@ -193,12 +187,12 @@ contract MyDex {
 
     // 给定一个token的输入, 计算兑换路径内所有token的所需数量
     function getAmountsOut(uint amountIn, address[] memory path) public view returns(uint[] memory amounts) {
-        return PairLibrary.getAmountsOut(address(factory), amountIn, path);
+        return PairLibrary.getAmountsOut(factory, amountIn, path);
     }
 
     // 给定一个token的输出, 计算兑换路径内所有token的所需数量
     function getAmountsIn(uint amountOut, address[] memory path) public view returns(uint[] memory amounts) {
-        return PairLibrary.getAmountsIn(address(factory), amountOut, path);
+        return PairLibrary.getAmountsIn(factory, amountOut, path);
     }
 
 }

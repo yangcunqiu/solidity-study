@@ -13,6 +13,7 @@
     "@openzeppelin/contracts": "^4.9.1",
     "@uniswap/lib": "^4.0.1-alpha",
     "@uniswap/v2-core": "^1.0.1",
+    "chai": "^4.3.7",
     "hardhat": "^2.14.0"
   }
 }
