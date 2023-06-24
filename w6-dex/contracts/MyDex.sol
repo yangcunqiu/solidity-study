@@ -33,7 +33,7 @@ contract MyDex {
             PairFactory(factory).createPair(_tokenA, _tokenB);
         }
         // 获取token储量
-        (uint reserveA, uint reserveB) = PairLibrary.getReserves(factory, _tokenA, _tokenB);
+        (uint reserveA, uint reserveB) = PairLibrary.getTokenReserves(factory, _tokenA, _tokenB);
         if (reserveA == 0 && reserveB == 0) {
             // pair第一次添加流动性
             (amountA, amountB) = (_amountADesired, _amountBDesired);
@@ -77,7 +77,6 @@ contract MyDex {
     ) public returns(uint amountA, uint amountB, uint liquidity) {
         // 计算能添加多少流动性
         (amountA, amountB) = _calLiquidity(_tokenA, _tokenB, _amountADesired, _amountBDesired, _amountAMin, _amountBMin);
-
         // 获取到pair地址
         address pair = PairLibrary.getPair(factory, _tokenA, _tokenB);
         // 转账 将调用者amount数量的token转到pair合约中
@@ -106,7 +105,7 @@ contract MyDex {
     /// @param _path 兑换路径 假如没有A和C的pair, 可以使用[A,B,C]通过B-token中转用A兑换出C
     /// @param _to 接收地址
     /// @return amounts 返回兑换路径中所有token的兑换数量
-    function swapEactTokenForTokens(
+    function swapExactTokenForTokens(
         uint _amountIn,
         uint _amountOutMin,
         address[] memory _path,
@@ -115,6 +114,7 @@ contract MyDex {
         // 计算出所有路径的可兑换数量
         amounts = PairLibrary.getAmountsOut(factory, _amountIn, _path);
         // 校验必须达到amountOutMin数量, amounts的最后一个就是要最终兑换出的token
+        console.log("optimal amountOut: %s", amounts[amounts.length - 1]);
         require(amounts[amounts.length - 1] >= _amountOutMin, "INSUFFICIENT_OUTPUT_AMOUNT");
         // 将path[0]的token从调用者转到pair合约, 转amounts[0]的数量, path[0]和amounts[0]就是调用者想用来兑换的token和数量
         TransferHelper.safeTransferFrom(_path[0], msg.sender, PairLibrary.getPair(factory, _path[0], _path[1]), amounts[0]);
@@ -182,7 +182,7 @@ contract MyDex {
 
     // 给定要兑换出的token数量和两个token的储量, 返回所需的另一种token的数量
     function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut) public view returns(uint amountIn) {
-        return PairLibrary.getAmountIn(amountOut, reserveIn, reserveOut);
+        return PairLibrary.getAmountOut(amountOut, reserveIn, reserveOut);
     }
 
     // 给定一个token的输入, 计算兑换路径内所有token的所需数量

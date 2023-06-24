@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import '@uniswap/lib/contracts/libraries/TransferHelper.sol';
+import "hardhat/console.sol";
 
 contract Pair is ERC20, ReentrancyGuard {
     address public immutable token0;
@@ -19,6 +20,7 @@ contract Pair is ERC20, ReentrancyGuard {
     event Mint(address, uint);
     // swap的时候触发
     event Swap(address account, uint amount0In, uint amount1In, uint amount0Out, uint amount1Out, address to);
+    // 销毁时触发
     event Burn(address account, address to, uint liquidity, uint amount0, uint amount1);
 
     constructor(address _token0, address _token1) ERC20("lpToken", "LP") {
@@ -49,7 +51,7 @@ contract Pair is ERC20, ReentrancyGuard {
         if (totalSupply() == 0) {
             liquidity = Math.sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY;
             // 第一次铸造要锁定最小流动性
-            _mint(address(0), MINIMUM_LIQUIDITY);
+            _mint(address(this), MINIMUM_LIQUIDITY);
         } else {
             liquidity = Math.min(amount0 * totalSupply() / _reserves0, amount1 * totalSupply() / _reserves1);
         }
@@ -63,7 +65,7 @@ contract Pair is ERC20, ReentrancyGuard {
     }
 
     function swap(uint amount0Out, uint amount1Out, address to) external nonReentrant {
-        require(amount0Out > 0 && amount1Out > 0, "INSUFFICIENT_OUTPUT_AMOUNT");
+        require(amount0Out > 0 || amount1Out > 0, "INSUFFICIENT_OUTPUT_AMOUNT");
         (uint _reserve0, uint _reserve1) = getReserves();
         require(amount0Out < _reserve0 && amount1Out < _reserve1, "INSUFFICIENT_LIQUIDITY");
 

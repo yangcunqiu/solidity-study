@@ -15,9 +15,8 @@ contract PairFactory {
         require(token0 != address(0), "ZERO_ADDRESS");
         require(pairMap[token0][token1] == address(0), "PAIR_EXISTS");
         // 创建pair
-        // bytes memory bytecode = type(Pair).creationCode;
         bytes32 salt = keccak256(abi.encodePacked(token0, token1));
-        Pair pair = new Pair{salt: salt}(_tokenA, _tokenB);
+        Pair pair = new Pair{salt: salt}(token0, token1);
         // 保存pair
         pairMap[token0][token1] = address(pair);
         pairMap[token1][token0] = address(pair);
