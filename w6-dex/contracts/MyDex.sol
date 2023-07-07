@@ -166,6 +166,7 @@ contract MyDex {
         // 排序, 区分token0和token1
         (address token0,) = PairLibrary.sortToken(_tokenA, _tokenB);
         (amountA, amountB) = _tokenA == token0 ? (amount0, amount1) : (amount1, amount0);
+        console.log("token0: %s, amountA: %s, amountB", token0, amountA, amountB);
         require(amountA >= _amountAMin, "INSUFFICIENT_A_AMOUNT");
         require(amountB >= _amountBMin, "INSUFFICIENT_B_AMOUNT");
     }

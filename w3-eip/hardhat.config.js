@@ -10,11 +10,6 @@ const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY;
 module.exports = {
   solidity: "0.8.17",
   networks: {
-    mumbai: {
-      url: `https://polygon-mumbai.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
-      accounts: [MUMBAI_PRIVATEKEY, MUMBAI_PRIVATEKEY2],
-      chainId: 80001
-    },
     aliyun: {
       url: "http://106.14.18.18:8545",
       accounts: [aliyunPrivate1]
