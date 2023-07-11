@@ -4,9 +4,9 @@ pragma solidity ^0.8.17;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import '@uniswap/lib/contracts/libraries/TransferHelper.sol';
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./MyDexToken.sol";
+import "./SafeMath.sol";
 
 contract MyDexTokenAllot is Ownable{
     using SafeMath for uint;
@@ -33,7 +33,7 @@ contract MyDexTokenAllot is Ownable{
     uint public mdtCount; // 每个区块产生的mdt数量
 
     constructor(address _myDexToken, uint _mdtCount) {
-        myDexToken = _myDexToken;
+        myDexToken = MyDexToken(_myDexToken);
         mdtCount = _mdtCount;
     }
 
@@ -56,16 +56,16 @@ contract MyDexTokenAllot is Ownable{
                 allocPoint: _allocPoint,
                 lastRewardBlock: lastRewardBlock,
                 accShareAmount: 0
-            });
+            })
         );
-        emit Add(msg.sender, _lpToken, _allocPoint)
+        emit Add(msg.sender, _lpToken, _allocPoint);
     }
 
     function updatePoolInfos() internal {
         uint length = poolInfos.length;
         for (uint i; i < length; i++) {
             updatePoolInfo(i);
-        }
+        } 
     }
 
     function updatePoolInfo(uint _pid) internal {
@@ -91,7 +91,7 @@ contract MyDexTokenAllot is Ownable{
         // 给当前合约mint
         myDexToken.mint(address(this), mdtReward);
         // 计算acc
-        pool.accShareAmount = pool.accShareAmount.add(mdtReward.mul(1e12).dev(lpSupply));
+        pool.accShareAmount = pool.accShareAmount.add(mdtReward.mul(1e12).div(lpSupply));
         pool.lastRewardBlock = block.number;
     }
 
@@ -103,7 +103,7 @@ contract MyDexTokenAllot is Ownable{
         updatePoolInfo(_pid);
         if (user.lpAmount >= 0) {
             // 待领取奖励
-            uint pendingAmount = user.lpAmount.mul(pool.accShareAmount).dev(1e12).sub(user.debtAmount);
+            uint pendingAmount = user.lpAmount.mul(pool.accShareAmount).div(1e12).sub(user.debtAmount);
             // 把用户上次的待领取奖励发给用户
             safeTransferMdt(msg.sender, pendingAmount);
         }
@@ -123,7 +123,7 @@ contract MyDexTokenAllot is Ownable{
         // 更新奖励
         updatePoolInfo(_pid);
         // 待领取奖励
-        uint pendingAmount = user.lpAmount.mul(pool.accShareAmount).dev(1e12).sub(user.debtAmount);
+        uint pendingAmount = user.lpAmount.mul(pool.accShareAmount).div(1e12).sub(user.debtAmount);
         // 把用户上次的待领取奖励发给用户
         safeTransferMdt(msg.sender, pendingAmount);
         // 更新
@@ -131,11 +131,11 @@ contract MyDexTokenAllot is Ownable{
         user.debtAmount = user.lpAmount.mul(pool.accShareAmount).div(1e12);
         // 将lp从当前合约转给用户
         IERC20(pool.lpToken).safeTransfer(msg.sender, _amount);
-        emit(msg.sender, pool.lpToken, _amount);
+        emit Withdraw(msg.sender, pool.lpToken, _amount);
     }
 
     // 查看用户待领取奖励
-    function pendingMdt(address _account, uint _pid) public returns(uint pendingAmount){
+    function pendingMdt(address _account, uint _pid) public view returns(uint pendingAmount){
         PoolInfo storage pool = poolInfos[_pid];
         UserInfo storage user = UserInfoMap[_pid][_account];
         uint acc = pool.accShareAmount;
@@ -150,7 +150,7 @@ contract MyDexTokenAllot is Ownable{
     }
 
     function getMultiplier(uint _start, uint _end) private pure returns(uint multipiler) {
-        return _end.sub(_start)
+        return _end.sub(_start);
     }
 
     function safeTransferMdt(address _to, uint _amount) private {
